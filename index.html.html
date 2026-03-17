@@ -44,28 +44,31 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         // 使用你指定的最新 Raw 網址
         var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
 
-       function getIcon(type) {
-    // 判斷顏色：大學用粉藍，其他(舞校)用粉紅
+      function getIcon(type) {
+    // 偵測視窗寬度，如果是大螢幕 (電腦) 圓點稍微大一點，小螢幕 (手機) 則維持小巧
+    var windowWidth = window.innerWidth;
+    var size = windowWidth > 1200 ? 12 : 8; // 電腦 12px, 手機/平板 8px
+    var borderSize = windowWidth > 1200 ? 2 : 1.5;
+
     var isUniv = (type && type.includes("University"));
-    var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; // 粉藍 : 粉紅
-    var borderColor = isUniv ? "#4682B4" : "#FF69B4"; // 深藍邊 : 深粉邊
+    var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; 
+    var borderColor = isUniv ? "#4682B4" : "#FF69B4"; 
 
     return L.divIcon({
         className: 'custom-dot',
         html: `<div style="
             background-color: ${bgColor}; 
-            width: 8px; 
-            height: 8px; 
+            width: ${size}px; 
+            height: ${size}px; 
             border-radius: 50%; 
-            border: 1.5px solid ${borderColor}; 
-            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+            border: ${borderSize}px solid ${borderColor}; 
+            box-shadow: 0 0 3px rgba(0,0,0,0.4);
         "></div>`,
-        iconSize: [10, 10],
-        iconAnchor: [5, 5],
-        popupAnchor: [0, -5]
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2],
+        popupAnchor: [0, -size/2]
     });
 }
-
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
