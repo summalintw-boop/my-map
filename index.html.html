@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>全球舞蹈學校地圖 - 專業版</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        #map { height: 100vh; width: 100%; background: #f8f9fa; }
+        body { margin: 0; padding: 0; }
+        .info-box { color: #333; line-height: 1.5; min-width: 240px; font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; }
+        .tag { 
+            display: inline-block; padding: 2px 8px; border-radius: 12px; 
+            font-size: 11px; margin-bottom: 5px; font-weight: bold; 
+        }
+        .tag-univ { background: #ffebee; color: #c62828; } /* 大學標籤顏色 */
+        .tag-acad { background: #e3f2fd; color: #1565c0; } /* 舞校標籤顏色 */
+        .btn-link { 
+            display: block; margin-top: 12px; padding: 8px; 
+            background: #d4af37; color: white; text-decoration: none; 
+            border-radius: 4px; font-weight: bold; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([20, 0], 2);
+
+      // 將原有的 L.tileLayer 修改為 CartoDB 的極簡風格
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
+
+        // 使用你指定的最新 Raw 網址
+        var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
+
+        function getIcon(type) {
+            var color = (type && type.includes("University")) ? "red" : "blue";
+            return new L.Icon({
+                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            });
+        }
+
+        Papa.parse(csvUrl, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                var markers = [];
+                results.data.forEach(function(school) {
+                    var coordsRaw = school["Latitude & Longitude (decimal format)"];
+                    if (coordsRaw) {
+                        var cleanCoords = coordsRaw.split(',');
+                        var lat = parseFloat(cleanCoords[0]);
+                        var lng = parseFloat(cleanCoords[1]);
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            var marker = L.marker([lat, lng], {icon: getIcon(school["Type"])}).addTo(map);
+                            markers.push([lat, lng]);
+
+                            // 判斷標籤顏色
+                            var tagClass = school["Type"] === "University" ? "tag-univ" : "tag-acad";
+                            
+                            marker.bindPopup(`
+                                <div class="info-box">
+                                    <span class="tag ${tagClass}">${school["Type"]}</span>
+                                    <strong style="display:block; font-size:16px; margin:4px 0;">${school["School Name"]}</strong>
+                                    <div style="font-size:13px; color:#666;">${school.City}, ${school.Country}</div>
+                                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+                                    <b>隸屬：</b>${school["Affiliation"] || "--"}<br>
+                                    <b>招收年紀：</b>${school["Enrollment Age"] || "--"}<br>
+                                    <b>學費：</b>${school["Annual Tuition (Local)"] || "--"}<br>
+                                    <b>宿舍/獎學金：</b>${school["Boarding"]} / ${school["Scholarship"]}<br>
+                                    <a href="${school["Website"]}" target="_blank" class="btn-link">前往官網 ➔</a>
+                                </div>
+                            `);
+                        }
+                    }
+                });
+                if (markers.length > 0) map.fitBounds(L.latLngBounds(markers), {padding: [50, 50]});
+            }
+        });
+    </script>
+</body>
+</html>
