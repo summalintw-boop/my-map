@@ -23,9 +23,11 @@
     </style>
 </head>
 <body>
-    <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-bottom: 2px solid #eee;">
-    <h1 style="margin: 0; color: #333; font-family: 'Microsoft JhengHei', sans-serif;">世界芭蕾舞學校分布</h1>
-    <p style="color: #666;">Ballet Schools Around the World</p>
+<div style="text-align: center; font-family: 'Microsoft JhengHei', sans-serif; padding: 20px; background-color: #ffffff;">
+    <h1 style="margin-bottom: 5px; color: #2c3e50;">世界芭蕾舞學校分布</h1>
+    <p style="margin-top: 0; color: #7f8c8d; font-size: 0.9em;">
+        發布者製作者：Cheng, Yun-Rong & Lin, Sheng-Chi
+    </p>
 </div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -42,14 +44,27 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         // 使用你指定的最新 Raw 網址
         var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
 
-        function getIcon(type) {
-            var color = (type && type.includes("University")) ? "red" : "blue";
-            return new L.Icon({
-                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-            });
-        }
+       function getIcon(type) {
+    // 判斷顏色：大學用粉藍，其他(舞校)用粉紅
+    var isUniv = (type && type.includes("University"));
+    var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; // 粉藍 : 粉紅
+    var borderColor = isUniv ? "#4682B4" : "#FF69B4"; // 深藍邊 : 深粉邊
+
+    return L.divIcon({
+        className: 'custom-dot',
+        html: `<div style="
+            background-color: ${bgColor}; 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            border: 1.5px solid ${borderColor}; 
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        "></div>`,
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
+        popupAnchor: [0, -5]
+    });
+}
 
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
