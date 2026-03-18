@@ -7,117 +7,131 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        /* 全域佈局：Flexbox 確保 Banner 和地圖完美分配高度 */
         body { 
             margin: 0; padding: 0; 
             display: flex; flex-direction: column; 
             height: 100vh; width: 100vw;
-            font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; 
+            font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Microsoft JhengHei", sans-serif; 
             overflow: hidden;
         }
 
-        /* 1. 淡粉紅色 Banner 樣式 */
+        /* 1. 透明奶白色 Banner (Cream White) */
         .top-banner {
             text-align: center; 
-            padding: 20px 10px; 
-            background-color: #FFF0F5; /* LavenderBlush */
-            border-bottom: 2px solid #FFD1DC;
+            padding: 18px 10px; 
+            background-color: rgba(255, 253, 241, 0.95); /* 奶白色 */
+            border-bottom: 1px solid #EAEAEA;
             flex-shrink: 0; 
             z-index: 1001;
         }
-        .top-banner h1 { margin: 0; color: #DB7093; font-size: 26px; letter-spacing: 2px; }
+        .top-banner h1 { margin: 0; color: #000; font-size: 24px; font-weight: 500; letter-spacing: 1px; }
         .top-banner .sub-title { 
-            margin: 2px 0 8px 0; color: #DB7093; 
+            margin: 2px 0 5px 0; color: #333; 
             font-family: 'Times New Roman', Times, serif; 
-            font-style: italic; font-size: 1.6em; 
+            font-style: italic; font-size: 1.4em; 
         }
-        .top-banner .author { margin: 0; color: #888; font-size: 0.9em; }
+        .top-banner .author { margin: 0; color: #666; font-size: 0.8em; }
 
         /* 2. 地圖容器 */
-        #map { flex-grow: 1; width: 100%; background: #f8f9fa; position: relative; }
+        #map { flex-grow: 1; width: 100%; background: #fcfcfc; position: relative; }
 
-        /* 3. 進階搜尋框樣式 */
+        /* 3. 右側搜尋面板 */
         .search-container {
             position: absolute;
             top: 20px;
             right: 20px;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: 260px;
+            background: rgba(255, 255, 255, 0.9); /* 透明白 */
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            max-height: 75vh;
         }
-        .search-inner { display: flex; gap: 6px; margin-bottom: 0; }
+        .search-inner { display: flex; gap: 8px; margin-bottom: 10px; }
         #search-input {
             flex-grow: 1;
             padding: 8px 12px;
-            border: 1px solid #FFE4E1;
+            border: 1px solid #DDD;
             border-radius: 6px;
             outline: none;
             font-size: 14px;
         }
-        /* 調整後的粉嫩按鈕 */
-        #search-btn {
-            padding: 8px 15px;
-            background-color: #FFD1DC; /* 櫻花粉 */
-            color: #D87093; /* 深粉紅字 */
+        /* 前一版的粉紅色按鈕配置 */
+        .btn-pink {
+            padding: 8px 12px;
+            background-color: #FFD1DC; 
+            color: #D87093; 
             border: 1px solid #FFC0CB;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.3s;
-            white-space: nowrap;
+            font-size: 13px;
         }
-        #search-btn:hover { background-color: #FFC0CB; }
 
-        /* 搜尋結果清單 */
         #search-results {
-            max-height: 250px;
             overflow-y: auto;
-            background: white;
-            margin-top: 8px;
-            border-radius: 4px;
+            border-top: 1px solid #EEE;
             display: none;
-            border-top: 1px solid #eee;
         }
         .result-item {
             padding: 10px;
             cursor: pointer;
-            border-bottom: 1px solid #f2f2f2;
-            transition: background 0.2s;
+            border-bottom: 1px solid #F5F5F5;
         }
-        .result-item:hover { background-color: #FFF0F5; }
-        .result-item strong { display: block; font-size: 14px; color: #333; }
-        .result-item span { font-size: 12px; color: #DB7093; }
+        .result-item:hover { background-color: #FFF5F7; }
+        .result-item.active { border-left: 4px solid #DB7093; background-color: #FFF5F7; }
+        .result-item strong { display: block; font-size: 14px; color: #000; font-weight: 500; }
+        .result-item span { font-size: 12px; color: #D87093; }
 
-        /* 4. Popup 與標籤樣式 */
-        .info-box { color: #333; line-height: 1.6; min-width: 220px; }
+        /* 4. Popup 資訊框：優化字體與間距 */
+        .info-box { 
+            color: #000; 
+            line-height: 1.5; 
+            min-width: 240px; 
+            padding: 2px;
+            font-weight: 300; /* 使用細體避免糊在一起 */
+        }
         .tag { 
-            display: inline-block; padding: 2px 10px; border-radius: 12px; 
-            font-size: 11px; margin-bottom: 8px; font-weight: bold; 
+            display: inline-block; padding: 1px 9px; border-radius: 10px; 
+            font-size: 10px; margin-bottom: 6px; font-weight: 600; 
         }
         .tag-univ { background: #E3F2FD; color: #1565C0; } 
         .tag-acad { background: #FCE4EC; color: #C2185B; } 
+        
+        .info-box strong.school-name {
+            display: block; 
+            font-size: 17px; 
+            margin: 4px 0; 
+            color: #000; 
+            font-weight: 600; /* 標題稍微粗一點，內容細一點 */
+        }
+        .info-detail { font-size: 13px; margin-top: 8px; }
+        .info-detail b { font-weight: 500; color: #000; } /* 標籤黑色 */
+        .info-detail span { color: #444; }
+
+        /* 前一版粉紅色的 Visit Website 按鈕 */
         .btn-link { 
-            display: block; margin-top: 12px; padding: 10px; 
-            background: #D4AF37; color: white; text-decoration: none; 
-            border-radius: 6px; font-weight: bold; text-align: center;
+            display: block; margin-top: 12px; padding: 9px; 
+            background-color: #FFD1DC; 
+            color: #D87093; 
+            text-decoration: none; 
+            border-radius: 6px; font-weight: bold; text-align: center; font-size: 13px;
+            border: 1px solid #FFC0CB;
+            transition: 0.2s;
         }
+        .btn-link:hover { background-color: #FFC0CB; }
 
-        /* 圖例 */
         .legend {
-            position: absolute; bottom: 35px; left: 15px; z-index: 1000;
-            background: white; padding: 10px; border-radius: 8px;
-            font-size: 13px; box-shadow: 0 0 8px rgba(0,0,0,0.15);
+            position: absolute; bottom: 30px; left: 20px; z-index: 1000;
+            background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px;
+            font-size: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.05);
         }
 
-        /* 手機版自動微調尺寸 */
         @media (max-width: 600px) {
-            .top-banner h1 { font-size: 20px; }
-            .top-banner .sub-title { font-size: 1.2em; }
-            .search-container { top: 10px; right: 10px; width: 200px; }
-            #search-input { width: 100px; }
+            .search-container { width: calc(100% - 40px); right: 20px; }
         }
     </style>
 </head>
@@ -133,97 +147,84 @@
         <div class="search-container">
             <div class="search-inner">
                 <input type="text" id="search-input" placeholder="搜尋學校或國家..." oninput="liveSearch()">
-                <button id="search-btn" onclick="liveSearch()">搜尋</button>
+                <button class="btn-pink" onclick="clearSearch()">清除</button>
             </div>
             <div id="search-results"></div>
         </div>
         
         <div class="legend">
-            <div style="margin-bottom:5px;"><span style="color: #FFB6C1; font-size: 18px;">●</span> 芭蕾舞學校</div>
-            <div><span style="color: #ADD8E6; font-size: 18px;">●</span> 大學舞蹈系</div>
+            <div style="margin-bottom:4px;"><span style="color: #FFB6C1;">●</span> 芭蕾舞學校</div>
+            <div><span style="color: #ADD8E6;">●</span> 大學舞蹈系</div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- 1. 初始化地圖與變數 ---
-        var map = L.map('map').setView([20, 0], 2);
+        var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
         var allMarkers = []; 
         var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
 
-        // --- 2. 載入底圖 ---
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO',
-            maxZoom: 20
+            attribution: '&copy; CARTO'
         }).addTo(map);
 
-        // --- 3. 動態圓點功能 ---
         function getIcon(type) {
             var isUniv = (type && type.includes("University"));
             var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; 
             var borderColor = isUniv ? "#4682B4" : "#FF69B4"; 
-            var size = window.innerWidth > 1200 ? 14 : 10;
-
+            var size = 11;
             return L.divIcon({
                 className: 'custom-dot',
-                html: `<div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid ${borderColor}; box-shadow: 0 0 4px rgba(0,0,0,0.3); position: relative;">
-                        <div style="position: absolute; top: -15px; left: -15px; width: 40px; height: 40px; background: transparent;"></div>
-                      </div>`,
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2],
-                popupAnchor: [0, -size/2]
+                html: `<div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 1.8px solid ${borderColor}; box-shadow: 0 0 2px rgba(0,0,0,0.2);"></div>`,
+                iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2]
             });
         }
 
-        // --- 4. 讀取 CSV 並存入搜尋清單 ---
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
-                var latlngs = [];
                 results.data.forEach(function(school) {
                     var coordsRaw = school["Latitude & Longitude (decimal format)"];
                     if (coordsRaw) {
                         var parts = coordsRaw.split(',');
                         var lat = parseFloat(parts[0]);
                         var lng = parseFloat(parts[1]);
-
                         if (!isNaN(lat) && !isNaN(lng)) {
                             var type = school["Type"] || "";
                             var marker = L.marker([lat, lng], {icon: getIcon(type)}).addTo(map);
                             
-                            // *** 重要：儲存搜尋用的資訊 ***
                             allMarkers.push({
-                                name: school["School Name"] || "Unknown School",
+                                name: school["School Name"] || "Unknown",
                                 country: school["Country"] || "",
                                 marker: marker
                             });
 
                             var isUniv = type.includes("University");
                             var tagClass = isUniv ? "tag-univ" : "tag-acad";
-                            
+
                             marker.bindPopup(`
                                 <div class="info-box">
                                     <span class="tag ${tagClass}">${type}</span>
-                                    <strong style="display:block; font-size:16px; margin:4px 0;">${school["School Name"]}</strong>
-                                    <div style="font-size:13px; color:#666;">${school.City}, ${school.Country}</div>
-                                    <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
-                                    <div style="font-size:12px;">
-                                        <b>Affiliation:</b> ${school["Affiliation"] || "--"}<br>
-                                        <b>Age:</b> ${school["Enrollment Age"] || "--"}<br>
-                                        <b>Tuition:</b> ${school["Annual Tuition (Local)"] || "--"}
+                                    <strong class="school-name">${school["School Name"]}</strong>
+                                    <div style="font-size:12px; color:#555;">📍 ${school.City}, ${school.Country}</div>
+                                    <hr style="margin:10px 0; border:0; border-top:1px solid #EEE;">
+                                    <div class="info-detail">
+                                        <b>隸屬:</b> <span>${school["Affiliation"] || "--"}</span><br>
+                                        <b>年紀:</b> <span>${school["Enrollment Age"] || "--"}</span><br>
+                                        <b>學費:</b> <span>${school["Annual Tuition (Local)"] || "--"}</span><br>
+                                        <b>宿舍/獎學金:</b> <span>${school["Boarding"] || "--"} / ${school["Scholarship"] || "--"}</span>
                                     </div>
-                                    <a href="${school["Website"]}" target="_blank" class="btn-link">Visit Website ➔</a>
+                                    <a href="${school["Website"]}" target="_blank" class="btn-link">前往官網 Visit Website ➔</a>
                                 </div>
                             `);
-                            latlngs.push([lat, lng]);
                         }
                     }
                 });
-                if (latlngs.length > 0) map.fitBounds(L.latLngBounds(latlngs), {padding: [50, 50]});
             }
         });
 
-        // --- 5. 即時搜尋清單功能 ---
         function liveSearch() {
             var query = document.getElementById('search-input').value.toLowerCase().trim();
             var resultsDiv = document.getElementById('search-results');
@@ -235,8 +236,7 @@
             }
 
             var matches = allMarkers.filter(function(item) {
-                return item.name.toLowerCase().includes(query) || 
-                       item.country.toLowerCase().includes(query);
+                return item.name.toLowerCase().includes(query) || item.country.toLowerCase().includes(query);
             });
 
             if (matches.length > 0) {
@@ -245,10 +245,14 @@
                     var div = document.createElement('div');
                     div.className = 'result-item';
                     div.innerHTML = `<strong>${item.name}</strong><span>📍 ${item.country}</span>`;
+                    
                     div.onclick = function() {
-                        map.setView(item.marker.getLatLng(), 15);
-                        item.marker.openPopup();
-                        resultsDiv.style.display = 'none'; 
+                        document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
+                        div.classList.add('active');
+                        map.flyTo(item.marker.getLatLng(), 15, { duration: 1.5 });
+                        map.once('moveend', function() {
+                            item.marker.openPopup();
+                        });
                     };
                     resultsDiv.appendChild(div);
                 });
@@ -257,19 +261,20 @@
             }
         }
 
-        // --- 6. 動態縮放圓點大小 ---
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            var resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'none';
+            map.flyTo([20, 0], 2);
+        }
+
         map.on('zoomend', function() {
             var z = map.getZoom();
-            var newSize = z <= 3 ? 8 : (z <= 6 ? 12 : 22);
-            document.querySelectorAll('.custom-dot div:first-child').forEach(function(dot) {
-                dot.style.width = newSize + 'px';
-                dot.style.height = newSize + 'px';
+            var newSize = z <= 3 ? 8 : (z <= 6 ? 11 : 18);
+            document.querySelectorAll('.custom-dot').forEach(function(dot) {
+                dot.style.width = newSize + 'px'; dot.style.height = newSize + 'px';
             });
-        });
-
-        // 點擊地圖其他地方隱藏搜尋結果
-        map.on('click', function() {
-            document.getElementById('search-results').style.display = 'none';
         });
     </script>
 </body>
