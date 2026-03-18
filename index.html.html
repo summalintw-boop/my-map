@@ -1,155 +1,276 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-    <title>全球舞蹈學校地圖 - 專業版</title>
+    <title>全球舞蹈學校地圖 - Ballet in the World</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        #map { height: 100vh; width: 100%; background: #f8f9fa; }
-        body { margin: 0; padding: 0; }
-        .info-box { color: #333; line-height: 1.5; min-width: 240px; font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; }
-        .tag { 
-            display: inline-block; padding: 2px 8px; border-radius: 12px; 
-            font-size: 11px; margin-bottom: 5px; font-weight: bold; 
+        /* 全域佈局：Flexbox 確保 Banner 和地圖完美分配高度 */
+        body { 
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column; 
+            height: 100vh; width: 100vw;
+            font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; 
+            overflow: hidden;
         }
-        .tag-univ { background: #ffebee; color: #c62828; } /* 大學標籤顏色 */
-        .tag-acad { background: #e3f2fd; color: #1565c0; } /* 舞校標籤顏色 */
+
+        /* 1. 淡粉紅色 Banner 樣式 */
+        .top-banner {
+            text-align: center; 
+            padding: 20px 10px; 
+            background-color: #FFF0F5; /* LavenderBlush */
+            border-bottom: 2px solid #FFD1DC;
+            flex-shrink: 0; 
+            z-index: 1001;
+        }
+        .top-banner h1 { margin: 0; color: #DB7093; font-size: 26px; letter-spacing: 2px; }
+        .top-banner .sub-title { 
+            margin: 2px 0 8px 0; color: #DB7093; 
+            font-family: 'Times New Roman', Times, serif; 
+            font-style: italic; font-size: 1.6em; 
+        }
+        .top-banner .author { margin: 0; color: #888; font-size: 0.9em; }
+
+        /* 2. 地圖容器 */
+        #map { flex-grow: 1; width: 100%; background: #f8f9fa; position: relative; }
+
+        /* 3. 進階搜尋框樣式 */
+        .search-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 260px;
+        }
+        .search-inner { display: flex; gap: 6px; margin-bottom: 0; }
+        #search-input {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid #FFE4E1;
+            border-radius: 6px;
+            outline: none;
+            font-size: 14px;
+        }
+        /* 調整後的粉嫩按鈕 */
+        #search-btn {
+            padding: 8px 15px;
+            background-color: #FFD1DC; /* 櫻花粉 */
+            color: #D87093; /* 深粉紅字 */
+            border: 1px solid #FFC0CB;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        #search-btn:hover { background-color: #FFC0CB; }
+
+        /* 搜尋結果清單 */
+        #search-results {
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            margin-top: 8px;
+            border-radius: 4px;
+            display: none;
+            border-top: 1px solid #eee;
+        }
+        .result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f2f2f2;
+            transition: background 0.2s;
+        }
+        .result-item:hover { background-color: #FFF0F5; }
+        .result-item strong { display: block; font-size: 14px; color: #333; }
+        .result-item span { font-size: 12px; color: #DB7093; }
+
+        /* 4. Popup 與標籤樣式 */
+        .info-box { color: #333; line-height: 1.6; min-width: 220px; }
+        .tag { 
+            display: inline-block; padding: 2px 10px; border-radius: 12px; 
+            font-size: 11px; margin-bottom: 8px; font-weight: bold; 
+        }
+        .tag-univ { background: #E3F2FD; color: #1565C0; } 
+        .tag-acad { background: #FCE4EC; color: #C2185B; } 
         .btn-link { 
-            display: block; margin-top: 12px; padding: 8px; 
-            background: #d4af37; color: white; text-decoration: none; 
-            border-radius: 4px; font-weight: bold; text-align: center;
+            display: block; margin-top: 12px; padding: 10px; 
+            background: #D4AF37; color: white; text-decoration: none; 
+            border-radius: 6px; font-weight: bold; text-align: center;
+        }
+
+        /* 圖例 */
+        .legend {
+            position: absolute; bottom: 35px; left: 15px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 8px;
+            font-size: 13px; box-shadow: 0 0 8px rgba(0,0,0,0.15);
+        }
+
+        /* 手機版自動微調尺寸 */
+        @media (max-width: 600px) {
+            .top-banner h1 { font-size: 20px; }
+            .top-banner .sub-title { font-size: 1.2em; }
+            .search-container { top: 10px; right: 10px; width: 200px; }
+            #search-input { width: 100px; }
         }
     </style>
 </head>
 <body>
 
-<div style="
-    text-align: center; 
-    font-family: 'serif', 'Microsoft JhengHei', sans-serif; 
-    padding: 25px 20px; 
-    background-color: #FFF0F5; /* LavenderBlush 淡粉紅 */
-    border-bottom: 2px solid #FFD1DC; /* 輕微深粉紅邊框 */
-">
-    <h1 style="margin: 0; color: #DB7093; font-size: 28px; letter-spacing: 2px;">世界芭蕾舞學校分布</h1>
-    
-    <p style="
-        margin: 5px 0 10px 0; 
-        color: #DB7093; 
-        font-family: 'Times New Roman', Times, serif; 
-        font-style: italic; 
-        font-size: 1.2em;
-    ">
-        Ballet in the World
-    </p>
-    
-    <p style="margin: 0; color: #7f8c8d; font-size: 0.9em; letter-spacing: 1px;">
-        製作者：Cheng, Yun-Rong & Lin, Sheng-Chi
-    </p>
-</div>
+    <header class="top-banner">
+        <h1>世界芭蕾舞學校分布</h1>
+        <div class="sub-title">Ballet in the World</div>
+        <p class="author">製作者：Cheng, Yun-Rong & Lin, Sheng-Chi</p>
+    </header>
 
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-    // 初始化地圖
-    var map = L.map('map').setView([20, 0], 2);
-
-    // 使用 CartoDB 的極簡風格底圖
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 20
-    }).addTo(map);
-
-        // 請將這段複製替換到你的 index.html 中
-      var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
+    <div id="map">
+        <div class="search-container">
+            <div class="search-inner">
+                <input type="text" id="search-input" placeholder="搜尋學校或國家..." oninput="liveSearch()">
+                <button id="search-btn" onclick="liveSearch()">搜尋</button>
+            </div>
+            <div id="search-results"></div>
+        </div>
         
-     function getIcon(type) {
-    var windowWidth = window.innerWidth;
-    // 調大手機版的基礎尺寸，並確保大螢幕更清晰
-    var size = windowWidth > 1200 ? 14 : 12; 
-    var borderSize = 2;
+        <div class="legend">
+            <div style="margin-bottom:5px;"><span style="color: #FFB6C1; font-size: 18px;">●</span> 芭蕾舞學校</div>
+            <div><span style="color: #ADD8E6; font-size: 18px;">●</span> 大學舞蹈系</div>
+        </div>
+    </div>
 
-    var isUniv = (type && type.includes("University"));
-    var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; 
-    var borderColor = isUniv ? "#4682B4" : "#FF69B4"; 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- 1. 初始化地圖與變數 ---
+        var map = L.map('map').setView([20, 0], 2);
+        var allMarkers = []; 
+        var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
 
-    return L.divIcon({
-        className: 'custom-dot',
-        // 增加一個 hidden 的擴展層，讓點擊範圍變大（40x40px），這對手機非常重要
-        html: `<div style="
-            background-color: ${bgColor}; 
-            width: ${size}px; 
-            height: ${size}px; 
-            border-radius: 50%; 
-            border: ${borderSize}px solid ${borderColor}; 
-            box-shadow: 0 0 3px rgba(0,0,0,0.4);
-            position: relative;
-        ">
-            <div style="position: absolute; top: -15px; left: -15px; width: 40px; height: 40px; background: transparent;"></div>
-        </div>`,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size/2],
-        popupAnchor: [0, -size/2]
-    });
-}
+        // --- 2. 載入底圖 ---
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO',
+            maxZoom: 20
+        }).addTo(map);
+
+        // --- 3. 動態圓點功能 ---
+        function getIcon(type) {
+            var isUniv = (type && type.includes("University"));
+            var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; 
+            var borderColor = isUniv ? "#4682B4" : "#FF69B4"; 
+            var size = window.innerWidth > 1200 ? 14 : 10;
+
+            return L.divIcon({
+                className: 'custom-dot',
+                html: `<div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid ${borderColor}; box-shadow: 0 0 4px rgba(0,0,0,0.3); position: relative;">
+                        <div style="position: absolute; top: -15px; left: -15px; width: 40px; height: 40px; background: transparent;"></div>
+                      </div>`,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2],
+                popupAnchor: [0, -size/2]
+            });
+        }
+
+        // --- 4. 讀取 CSV 並存入搜尋清單 ---
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
-                var markers = [];
+                var latlngs = [];
                 results.data.forEach(function(school) {
                     var coordsRaw = school["Latitude & Longitude (decimal format)"];
                     if (coordsRaw) {
-                        var cleanCoords = coordsRaw.split(',');
-                        var lat = parseFloat(cleanCoords[0]);
-                        var lng = parseFloat(cleanCoords[1]);
+                        var parts = coordsRaw.split(',');
+                        var lat = parseFloat(parts[0]);
+                        var lng = parseFloat(parts[1]);
 
                         if (!isNaN(lat) && !isNaN(lng)) {
-                            var marker = L.marker([lat, lng], {icon: getIcon(school["Type"])}).addTo(map);
-                            markers.push([lat, lng]);
+                            var type = school["Type"] || "";
+                            var marker = L.marker([lat, lng], {icon: getIcon(type)}).addTo(map);
+                            
+                            // *** 重要：儲存搜尋用的資訊 ***
+                            allMarkers.push({
+                                name: school["School Name"] || "Unknown School",
+                                country: school["Country"] || "",
+                                marker: marker
+                            });
 
-                            // 判斷標籤顏色
-                            var tagClass = school["Type"] === "University" ? "tag-univ" : "tag-acad";
+                            var isUniv = type.includes("University");
+                            var tagClass = isUniv ? "tag-univ" : "tag-acad";
                             
                             marker.bindPopup(`
                                 <div class="info-box">
-                                    <span class="tag ${tagClass}">${school["Type"]}</span>
+                                    <span class="tag ${tagClass}">${type}</span>
                                     <strong style="display:block; font-size:16px; margin:4px 0;">${school["School Name"]}</strong>
                                     <div style="font-size:13px; color:#666;">${school.City}, ${school.Country}</div>
                                     <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
-                                    <b>Affiliation：</b>${school["Affiliation"] || "--"}<br>
-                                    <b>Enrollment Age：</b>${school["Enrollment Age"] || "--"}<br>
-                                    <b>Annual Tuition (Local)：</b>${school["Annual Tuition (Local)"] || "--"}<br>
-                                    <b>Boarding/Scholarship：</b>${school["Boarding"]} / ${school["Scholarship"]}<br>
-                                    <a href="${school["Website"]}" target="_blank" class="btn-link">前往官網 ➔</a>
+                                    <div style="font-size:12px;">
+                                        <b>Affiliation:</b> ${school["Affiliation"] || "--"}<br>
+                                        <b>Age:</b> ${school["Enrollment Age"] || "--"}<br>
+                                        <b>Tuition:</b> ${school["Annual Tuition (Local)"] || "--"}
+                                    </div>
+                                    <a href="${school["Website"]}" target="_blank" class="btn-link">Visit Website ➔</a>
                                 </div>
                             `);
+                            latlngs.push([lat, lng]);
                         }
                     }
                 });
-                if (markers.length > 0) map.fitBounds(L.latLngBounds(markers), {padding: [50, 50]});
+                if (latlngs.length > 0) map.fitBounds(L.latLngBounds(latlngs), {padding: [50, 50]});
             }
         });
-        // 當地圖縮放結束時，動態調整所有圓點的大小
-map.on('zoomend', function() {
-    var currentZoom = map.getZoom();
-    var newSize;
-    
-    // 根據縮放層級決定大小
-    if (currentZoom <= 3) {
-        newSize = 8;
-    } else if (currentZoom <= 6) {
-        newSize = 14;
-    } else {
-        newSize = 24; // 放大到城市層級時，點會變得很大，非常好點
-    }
 
-    document.querySelectorAll('.custom-dot div:first-child').forEach(function(dot) {
-        dot.style.width = newSize + 'px';
-        dot.style.height = newSize + 'px';
-    });
-});
+        // --- 5. 即時搜尋清單功能 ---
+        function liveSearch() {
+            var query = document.getElementById('search-input').value.toLowerCase().trim();
+            var resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = ''; 
+
+            if (query.length < 1) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            var matches = allMarkers.filter(function(item) {
+                return item.name.toLowerCase().includes(query) || 
+                       item.country.toLowerCase().includes(query);
+            });
+
+            if (matches.length > 0) {
+                resultsDiv.style.display = 'block';
+                matches.forEach(function(item) {
+                    var div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.innerHTML = `<strong>${item.name}</strong><span>📍 ${item.country}</span>`;
+                    div.onclick = function() {
+                        map.setView(item.marker.getLatLng(), 15);
+                        item.marker.openPopup();
+                        resultsDiv.style.display = 'none'; 
+                    };
+                    resultsDiv.appendChild(div);
+                });
+            } else {
+                resultsDiv.style.display = 'none';
+            }
+        }
+
+        // --- 6. 動態縮放圓點大小 ---
+        map.on('zoomend', function() {
+            var z = map.getZoom();
+            var newSize = z <= 3 ? 8 : (z <= 6 ? 12 : 22);
+            document.querySelectorAll('.custom-dot div:first-child').forEach(function(dot) {
+                dot.style.width = newSize + 'px';
+                dot.style.height = newSize + 'px';
+            });
+        });
+
+        // 點擊地圖其他地方隱藏搜尋結果
+        map.on('click', function() {
+            document.getElementById('search-results').style.display = 'none';
+        });
     </script>
 </body>
 </html>
