@@ -44,11 +44,11 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         // 請將這段複製替換到你的 index.html 中
       var csvUrl = "https://gist.githubusercontent.com/summalintw-boop/1ad7aba56beff6580117687628213ca7/raw/balletschool.csv?t=" + new Date().getTime();
         
-      function getIcon(type) {
-    // 偵測視窗寬度，如果是大螢幕 (電腦) 圓點稍微大一點，小螢幕 (手機) 則維持小巧
+     function getIcon(type) {
     var windowWidth = window.innerWidth;
-    var size = windowWidth > 1200 ? 12 : 8; // 電腦 12px, 手機/平板 8px
-    var borderSize = windowWidth > 1200 ? 2 : 1.5;
+    // 調大手機版的基礎尺寸，並確保大螢幕更清晰
+    var size = windowWidth > 1200 ? 14 : 12; 
+    var borderSize = 2;
 
     var isUniv = (type && type.includes("University"));
     var bgColor = isUniv ? "#ADD8E6" : "#FFB6C1"; 
@@ -56,6 +56,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 
     return L.divIcon({
         className: 'custom-dot',
+        // 增加一個 hidden 的擴展層，讓點擊範圍變大（40x40px），這對手機非常重要
         html: `<div style="
             background-color: ${bgColor}; 
             width: ${size}px; 
@@ -63,7 +64,10 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             border-radius: 50%; 
             border: ${borderSize}px solid ${borderColor}; 
             box-shadow: 0 0 3px rgba(0,0,0,0.4);
-        "></div>`,
+            position: relative;
+        ">
+            <div style="position: absolute; top: -15px; left: -15px; width: 40px; height: 40px; background: transparent;"></div>
+        </div>`,
         iconSize: [size, size],
         iconAnchor: [size/2, size/2],
         popupAnchor: [0, -size/2]
@@ -106,6 +110,25 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 if (markers.length > 0) map.fitBounds(L.latLngBounds(markers), {padding: [50, 50]});
             }
         });
+        // 當地圖縮放結束時，動態調整所有圓點的大小
+map.on('zoomend', function() {
+    var currentZoom = map.getZoom();
+    var newSize;
+    
+    // 根據縮放層級決定大小
+    if (currentZoom <= 3) {
+        newSize = 8;
+    } else if (currentZoom <= 6) {
+        newSize = 14;
+    } else {
+        newSize = 24; // 放大到城市層級時，點會變得很大，非常好點
+    }
+
+    document.querySelectorAll('.custom-dot div:first-child').forEach(function(dot) {
+        dot.style.width = newSize + 'px';
+        dot.style.height = newSize + 'px';
+    });
+});
     </script>
 </body>
 </html>
